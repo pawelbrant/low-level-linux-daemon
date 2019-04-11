@@ -1,10 +1,21 @@
 #include "local_functions.h"
 
+//concatenates char arrays
+char *add_Strings(char *a, char *b)
+{
+  int len = strlen(a) + strlen(b);
+  char *nowy = (char *)malloc(len*sizeof(char));
+  strcpy(nowy, a);
+  strcat(nowy, b);
+  return nowy;
+}
+
+//checks whether main app has been called with valid parameters
 bool is_Call_Valid(int number, char *params[])
 {
   if(number<3)
   {
-    printf("Not enought input arguments");
+    printf("Not enought input arguments\n");
     syslog(LOG_ERR, "Not enought input arguments");
     return false;
   }
@@ -20,6 +31,7 @@ bool is_Call_Valid(int number, char *params[])
   return false;
 }
 
+//checks whether given path points a directory
 bool is_Directory(char *path)
 {
   struct stat s;
@@ -33,14 +45,16 @@ bool is_Directory(char *path)
   return false;
 }
 
+//may be modified with following function to make one returning stat type
 off_t get_Size(char *input)
 {
   struct stat size;
-  if(stat(input, &size) == 0)
+  if(stat(input, &size) == -1)
   {
-    return size.st_size;
+    syslog(LOG_ERR, "Can't get size of file %s", input);
+    exit(EXIT_FAILURE);
   }
-  return -1;
+  return size.st_size;
 }
 
 time_t get_Time(char *input)
@@ -98,7 +112,7 @@ char *add_To_Path(char *path, char *file_name)
   strcat(new_path,file_name);
   new_path[strlen(path)+1+strlen(file_name)]='\0';
   printf("\n\n\n");
-  printf("add_to_path file_name %s\n",path);
+  printf("add_to_path file_name %s\n", new_path);
   printf("\n\n\n");
   return new_path;
 }
@@ -170,11 +184,11 @@ void delete_File(char *aux, char *input_folder_path, char *output_folder_path, b
 
 void copy_File(char *input, char *output)
 {
-  syslog(LOG_INFO, "Works up to this place");
   char buffer[16];
   int input_file, output_file, read_input, read_output;
   input_file = open(input, O_RDONLY);
   output_file = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+
   if(input_file == -1 || output_file == -1)
   {
     syslog(LOG_ERR, "Can't open a file.");
@@ -197,7 +211,6 @@ void copy_File(char *input, char *output)
 
 void copy_File_By_Mapping(char *input, char *output)
 {
-  syslog(LOG_INFO, "Works up to this place2");
   int size = get_Size(input);
   int input_file = open(input, O_RDONLY);
   int output_file = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
@@ -222,7 +235,6 @@ void Login(int sig)
 
 void browse_Folder(char *aux, char *input_folder_path, char *output_folder_path, bool recursive, int size_of_file)
 {
-  printf("%d\n", size_of_file );
   printf("We are in %s\n", aux);
   struct dirent *file;
   DIR *path, *tmp;
@@ -233,7 +245,6 @@ void browse_Folder(char *aux, char *input_folder_path, char *output_folder_path,
     printf("%s  \n", file->d_name);
     if((file->d_type)==DT_DIR)
     {
-      syslog(LOG_INFO, "WORKS.");
       if(recursive)
       {
         if(!(strcmp(file->d_name,".")==0 || strcmp(file->d_name,"..")==0))
@@ -252,16 +263,14 @@ void browse_Folder(char *aux, char *input_folder_path, char *output_folder_path,
     }
     else if((file->d_type)==DT_REG)
     {
-      syslog(LOG_INFO, "Czy działa poprawnie?");
       new_path = add_To_Path(aux, file->d_name);
       int i = file_Comparing(new_path, input_folder_path, output_folder_path);
-      printf("\n\nAAAAAAAAAAAAAAAA\n%d\n\n",i);
       if(i==1)
       {
-        syslog(LOG_INFO, "teraz działa dobrze");
         if(get_Size(new_path)>size_of_file)
         {
-          copy_File_By_Mapping(new_path, replace_Catalog(new_path, input_folder_path, output_folder_path));
+          char* source_file_path = replace_Catalog(new_path, input_folder_path, output_folder_path);
+          copy_File_By_Mapping(new_path, source_file_path);
         }
         else
         {
