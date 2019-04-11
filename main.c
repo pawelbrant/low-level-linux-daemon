@@ -93,9 +93,7 @@ int main(int argc, char *argv[])
   );
 
   while (1) {
-    printf("%s\n", "dzialam");
-    //delete_File(destination, source, destination, recursive);
-    printf("%s\n", "dzialam");
+    delete_File(source, destination, recursive);
     browse_Folder(source, destination, recursive, max_size);
     syslog(LOG_NOTICE, "Entering sleep mode");
     if(sleep(sleep_time) == 0)

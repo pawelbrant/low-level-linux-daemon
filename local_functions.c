@@ -4,7 +4,7 @@
 //checks whether main app has been called with valid parameters
 bool is_Call_Valid(int number, char *params[])
 {
-  if(number<3)
+  if(number < 3)
   {
     printf("Not enought input arguments\n");
     syslog(LOG_ERR, "Not enought input arguments");
@@ -82,16 +82,6 @@ void change_Parameters(char *input, char *output)
   }
 }
 
-
-char *replace_Catalog(char *aux, char *input_folder_path, char *output_folder_path)
-{
-  char *path = aux + strlen(input_folder_path);
-  char *new_path = malloc(strlen(output_folder_path)+strlen(path)+1);
-  strcpy(new_path,output_folder_path);
-  strcat(new_path,path);
-  return new_path;
-}
-
 char *add_To_Path(char *path, char *file_name)
 {
   int len = strlen(path) + strlen(file_name) + 1;
@@ -112,47 +102,69 @@ bool file_Comparing(char *file_name, char *input_folder_path, char *output_folde
   catalog_path = opendir(output_folder_path);
   while(file = readdir(catalog_path))
   {
-    if (strcmp(file->d_name, file_name) == 0)
-      if (!(get_Time(old_path) - get_Time(new_path)))
+    if(strcmp(file->d_name, file_name) == 0)
+    {
+      if((file -> d_type) == DT_REG)
+      {
+        if(!(get_Time(old_path) - get_Time(new_path)))
+          check = 0;
+      }
+      else
+      {
         check = 0;
+      }
+    }
   }
+  // printf("In func file_Comparing: %s %s %s return value %d\n", file_name, input_folder_path, output_folder_path, check);
   closedir(catalog_path);
   return check;
 }
 
-void delete_File(char *aux, char *input_folder_path, char *output_folder_path, bool recursive)
+void delete_File(char *input_folder_path, char *output_folder_path, bool recursive)
 {
-  struct dirent *file;
-  DIR *catalog_path, *tmp;
-  catalog_path = opendir(aux);
+  struct dirent *file, *content;
+  DIR *catalog_path, *temp;
+  char *old_path;
+  char *new_path;
+  catalog_path = opendir(output_folder_path);
   while(file = readdir(catalog_path))
   {
-    if((file->d_type)==DT_DIR)
+    if((file -> d_type) == DT_DIR && recursive)
     {
-      if(recursive)
+      if(!(strcmp(file -> d_name,".") == 0 || strcmp(file -> d_name, "..") == 0))
       {
-        if(!(strcmp(file->d_name,".") == 0 || strcmp(file->d_name, "..") == 0))
+        if(file_Comparing(file -> d_name, output_folder_path, input_folder_path))
         {
-          char *new_path = add_To_Path(aux,file->d_name);
-          delete_File(new_path,output_folder_path,input_folder_path,recursive);
-          if(!(tmp=opendir(add_To_Path(output_folder_path, file -> d_name))))
+          char *old_path = add_To_Path(input_folder_path, file -> d_name);
+          char *new_path = add_To_Path(output_folder_path, file -> d_name);
+          temp = opendir(new_path);
+          while(content = readdir(temp))
           {
-            syslog(LOG_INFO, "Catalog %s deleted.", new_path);
-            remove(new_path);
+            if(access(new_path, F_OK) == 0)
+            {
+              remove(add_To_Path(new_path, content -> d_name));
+            }
           }
-          else
-            closedir(tmp);
+          closedir(temp);
+          remove(new_path);
+          syslog(LOG_INFO, "Catalog %s deleted.", new_path);
+        }
+        else
+        {
+          char *old_path = add_To_Path(input_folder_path, file -> d_name);
+          char *new_path = add_To_Path(output_folder_path, file -> d_name);
+          delete_File(old_path, new_path, recursive);
         }
       }
-
     }
-    else
+    else if((file -> d_type) = DT_REG)
     {
-      char *new_path = add_To_Path(aux,file->d_name);
-      if(access(add_To_Path(output_folder_path, file -> d_name),F_OK) == -1)
+      char *old_path = add_To_Path(input_folder_path, file -> d_name);
+      char *new_path = add_To_Path(output_folder_path, file -> d_name);
+      if(access(new_path, F_OK) == 0 && file_Comparing(file -> d_name, output_folder_path, input_folder_path))
       {
-        syslog(LOG_INFO, "File %s deleted.", new_path);
         remove(new_path);
+        syslog(LOG_INFO, "File %s deleted.", new_path);
       }
     }
   }
@@ -214,33 +226,37 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
 {
   struct dirent *file;
   DIR *path, *tmp;
+  char *file_name;
+  char *old_path;
+  char *new_path;
   path = opendir(input_folder_path);
   while(file = readdir(path))
   {
-    char *file_name = file -> d_name;
-    char *old_path = add_To_Path(input_folder_path, file_name);
-    char *new_path = add_To_Path(output_folder_path, file_name);
-    if((file->d_type)==DT_REG)
+    if((file -> d_type) == DT_REG)
     {
-      if(file_Comparing(file_name, input_folder_path, output_folder_path))
-      {
+      old_path = add_To_Path(input_folder_path, file -> d_name);
+      new_path = add_To_Path(output_folder_path, file -> d_name);
+      if(file_Comparing(file -> d_name, input_folder_path, output_folder_path))
+
         if(get_Size(old_path)>size_of_file)
           copy_File_By_Mapping(old_path, new_path);
         else
           copy_File(old_path, new_path);
-      }
     }
     else if((file -> d_type) == DT_DIR && recursive)
     {
-      if((strcmp(file_name,".") != 0) && (strcmp(file_name,"..") != 0))
+      if(!(strcmp(file -> d_name,".") == 0 || strcmp(file -> d_name,"..") == 0))
       {
+        file_Comparing(file -> d_name, input_folder_path, output_folder_path);
+        old_path = add_To_Path(input_folder_path, file -> d_name);
+        new_path = add_To_Path(output_folder_path, file -> d_name);
         if(!(tmp = opendir(new_path)))
         {
           mkdir(new_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
           syslog(LOG_INFO, "Created folder %s", new_path);
         }
         else
-        closedir(tmp);
+          closedir(tmp);
         browse_Folder(old_path, new_path, recursive, size_of_file);
       }
     }
