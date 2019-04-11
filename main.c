@@ -83,18 +83,20 @@ int main(int argc, char *argv[])
   close(STDERR_FILENO);
 
   syslog(LOG_NOTICE,
-    "Daemon starts work with given parameters:\t"\
-    "Source directory: %s\t"\
-    "Destination directory: %s\t"\
-    "Sleep time: %d seconds\t"\
-    "Recursive: %d\t"\
+    "Daemon starts work with given parameters:  "\
+    "Source directory: %s  "\
+    "Destination directory: %s  "\
+    "Sleep time: %d seconds  "\
+    "Recursive: %d  "\
     "Max file size for standard copying: %d",
     source, destination, sleep_time, recursive, max_size
   );
 
   while (1) {
-    delete_File(destination, source, destination, recursive);
-    browse_Folder(source, source, destination, recursive, max_size);
+    printf("%s\n", "dzialam");
+    //delete_File(destination, source, destination, recursive);
+    printf("%s\n", "dzialam");
+    browse_Folder(source, destination, recursive, max_size);
     syslog(LOG_NOTICE, "Entering sleep mode");
     if(sleep(sleep_time) == 0)
       syslog(LOG_NOTICE, "Wake up");

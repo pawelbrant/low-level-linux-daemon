@@ -29,4 +29,4 @@ bool file_Comparing(char *path, char *input_folder_path, char *output_folder_pat
 void delete_File(char *aux, char *input_folder_path, char *output_folder_path, bool recursive);
 void copy_File(char *input, char *output);
 void Login(int sig);
-void browse_Folder(char *aux, char *input_folder_path, char *output_folder_path, bool recursive, int size_of_file);
+void browse_Folder(char *input_folder_path, char *output_folder_path, bool recursive, int size_of_file);
