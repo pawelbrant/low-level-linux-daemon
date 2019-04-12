@@ -6,7 +6,7 @@ int main(int argc, char *argv[])
   openlog("low-level-linux-daemon", LOG_PID|LOG_CONS, LOG_USER);
   syslog(LOG_NOTICE, "Starting daemon");
 
-  // checking if arguments point to directories
+  //checking if arguments point to directories
   if (!(is_Call_Valid(argc, argv)))
   {
     exit(EXIT_FAILURE);
@@ -92,13 +92,29 @@ int main(int argc, char *argv[])
     source, destination, sleep_time, recursive, max_size
   );
 
-  while (1) {
+  // while (1) {
+    // char file[] = "/home/pawel/Documents/Downloads";
+    // DIR *catalog_path = opendir("/home/pawel");
+    // struct dirent *file1;
+    // while((file1 = readdir(catalog_path)))
+    // {
+    //   printf("Plik %s\n", file1 -> d_name);
+    //   printf("%d\n", file1 -> d_type);
+    // }
+    // closedir(catalog_path);
+    // printf("Plik %s\n", file);
+    // printf("%d\n", get_Type(file));
+    // printf("%ld\n", get_Size(file));
+    // printf("%ld\n", get_Time(file));
+    // printf("%d\n", get_Permissions(file));
+
     delete_File(source, destination, recursive);
+    printf("%s\n", "daksjfn");
     browse_Folder(source, destination, recursive, max_size);
     syslog(LOG_NOTICE, "Entering sleep mode");
-    if(sleep(sleep_time) == 0)
-      syslog(LOG_NOTICE, "Wake up");
-  }
+    // if(sleep(sleep_time) == 0)
+    //   syslog(LOG_NOTICE, "Wake up");
+  // }
   closelog();
   exit(EXIT_SUCCESS);
 }

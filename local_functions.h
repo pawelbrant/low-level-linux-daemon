@@ -15,18 +15,18 @@
 #include <utime.h>
 #include <fcntl.h>
 #include <syslog.h>
+#include <errno.h>
 
-char *add_Strings(char *a, char *b);
-bool is_Call_Valid(int number, char *params[]);
-bool is_Directory(char *path);
+int is_Call_Valid(int number_of_parameters, char *parameters[]);
+int get_Type(char *path);
 off_t get_Size(char *input);
 time_t get_Time(char *input);
 mode_t get_Permissions(char *input);
-void change_Parameters(char *input, char *output);
-char *replace_Catalog(char *path, char *input_folder_path, char *output_folder_path);
+int change_Parameters(char *input, char *output);
 char *add_To_Path(char *path, char *file_name);
-bool file_Comparing(char *path, char *input_folder_path, char *output_folder_path);
-void delete_File(char *input_folder_path, char *output_folder_path, bool recursive);
+int are_Same(char *file_name, char *input_folder_path, char *output_folder_path);
+int delete_File(char *input_folder_path, char *output_folder_path, bool recursive);
 void copy_File(char *input, char *output);
+void copy_File_By_Mapping(char *input, char *output);
 void Login(int sig);
 void browse_Folder(char *input_folder_path, char *output_folder_path, bool recursive, int size_of_file);
