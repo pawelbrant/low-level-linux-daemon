@@ -4,7 +4,7 @@ int main(int argc, char *argv[])
 {
   // opening log
   openlog("low-level-linux-daemon", LOG_PID|LOG_CONS, LOG_USER);
-  syslog(LOG_NOTICE, "Starting daemon");
+  syslog(LOG_INFO, "Starting daemon");
 
   // checking if arguments point to directories
   if (!(is_Call_Valid(argc, argv)))
@@ -17,7 +17,8 @@ int main(int argc, char *argv[])
   char *destination = argv[2];
 
   //setting default option values
-  int sleep_time = 300, max_size = 1024;
+  int sleep_time = 300;
+  long  max_size = 1024;
   bool recursive = false;
 
   // modifying option values from given parameters
@@ -41,7 +42,8 @@ int main(int argc, char *argv[])
   }
   if (sleep_time == 0 || max_size == 0)
   {
-    syslog(LOG_ERR, "Invalid option values. Daemon shutting down");
+    syslog(LOG_ERR, "Invalid option values");
+    syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
   //creating new process ID and session ID variables
@@ -52,11 +54,13 @@ int main(int argc, char *argv[])
   if (pid < 0)
   {
     syslog(LOG_ERR, "Unable to fork");
+    syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
 
   //exiting the parent process
-  if (pid > 0) {
+  if (pid > 0)
+  {
     exit(EXIT_SUCCESS);
   }
 
@@ -68,16 +72,19 @@ int main(int argc, char *argv[])
   if (sid < 0)
   {
     syslog(LOG_ERR, "Unable to get session ID");
+    syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
 
   // changing the current working directory
-  if ((chdir("/")) < 0) {
-    /* Log the failure */
+  if ((chdir("/")) < 0)
+  {
+    syslog(LOG_ERR, "Could not change working directory");
+    syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
 
-  // closing out the standard file descriptors
+  // closing the standard file descriptors
   close(STDIN_FILENO);
   //close(STDOUT_FILENO);
   close(STDERR_FILENO);
@@ -88,17 +95,29 @@ int main(int argc, char *argv[])
     "Destination directory: %s  "\
     "Sleep time: %d seconds  "\
     "Recursive: %d  "\
-    "Max file size for standard copying: %d",
+    "Max file size for standard copying: %ld",
     source, destination, sleep_time, recursive, max_size
   );
 
-  while (1) {
-    delete_File(source, destination, recursive);
+  while (1)
+  {
+    check_Existing(source, destination, recursive);
     browse_Folder(source, destination, recursive, max_size);
     syslog(LOG_NOTICE, "Entering sleep mode");
-    if(sleep(sleep_time) == 0)
-      syslog(LOG_NOTICE, "Wake up");
+    if(sleep(sleep_time) == 0 || wake == 1)
+    {
+      if(wake == 1)
+      {
+        syslog(LOG_NOTICE, "Woken up by user");
+        wake = 0;
+      }
+      else
+      {
+        syslog(LOG_NOTICE, "Woken up by itself");
+      }
+    }
   }
   closelog();
-  exit(EXIT_SUCCESS);
+  syslog(LOG_NOTICE, "Daemon shutting down");
+  return 0;
 }

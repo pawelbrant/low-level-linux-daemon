@@ -16,17 +16,16 @@
 #include <fcntl.h>
 #include <syslog.h>
 
-char *add_Strings(char *a, char *b);
-bool is_Call_Valid(int number, char *params[]);
+bool is_Call_Valid(int number_of_parameters, char *parameters[]);
 bool is_Directory(char *path);
-off_t get_Size(char *input);
-time_t get_Time(char *input);
-mode_t get_Permissions(char *input);
+off_t get_Size(char *path);
+time_t get_Time(char *path);
+mode_t get_Permissions(char *path);
 void change_Parameters(char *input, char *output);
-char *replace_Catalog(char *path, char *input_folder_path, char *output_folder_path);
 char *add_To_Path(char *path, char *file_name);
-bool file_Comparing(char *path, char *input_folder_path, char *output_folder_path);
-void delete_File(char *input_folder_path, char *output_folder_path, bool recursive);
+bool are_Same(char *file_name, char *input_folder_path, char *output_folder_path);
+void check_Existing(char *input_folder_path, char *output_folder_path, bool recursive);
+void delete_Folder(char *path);
 void copy_File(char *input, char *output);
-void Login(int sig);
+void copy_File_By_Mapping(char *input, char *output);
 void browse_Folder(char *input_folder_path, char *output_folder_path, bool recursive, int size_of_file);
