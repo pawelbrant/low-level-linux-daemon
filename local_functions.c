@@ -65,6 +65,9 @@ time_t get_Time(char *input)
   return time.st_mtime;
 }
 
+//returns permissions of a file
+//takes paths
+//currently unused
 mode_t get_Permissions(char *input)
 {
   struct stat permissions;
@@ -89,6 +92,8 @@ int change_Parameters(char *input, char *output)
   return 0;
 }
 
+//creates a valid path to a file from path to a directory and filename
+//takes path to directory and filename
 char *add_To_Path(char *path, char *file_name)
 {
   int len = strlen(path) + strlen(file_name) + 1;
@@ -100,6 +105,7 @@ char *add_To_Path(char *path, char *file_name)
   strcat(new_path,file_name);
   return new_path;
 }
+
 
 int are_Same(char *file_name, char *input_folder_path, char *output_folder_path)
 {
@@ -127,7 +133,8 @@ int are_Same(char *file_name, char *input_folder_path, char *output_folder_path)
       }
     }
   }
-  printf("In func are_Same: %s %s %s return value %d\n", file_name, input_folder_path, output_folder_path, check);
+  free(old_path);
+  free(new_path);
   closedir(catalog_path);
   return check;
 }
@@ -175,6 +182,7 @@ int delete_File(char *input_folder_path, char *output_folder_path, bool recursiv
     }
     else if((file -> d_type) == DT_REG)
     {
+      // printf("%s\n", "2");
       char *old_path = add_To_Path(input_folder_path, file -> d_name);
       char *new_path = add_To_Path(output_folder_path, file -> d_name);
       if(access(new_path, F_OK) == 0 && are_Same(file -> d_name, output_folder_path, input_folder_path))
@@ -182,6 +190,8 @@ int delete_File(char *input_folder_path, char *output_folder_path, bool recursiv
         remove(new_path);
         syslog(LOG_INFO, "File %s deleted.", new_path);
       }
+      free(old_path);
+      free(new_path);
     }
   }
   closedir(catalog_path);
@@ -258,13 +268,13 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
           copy_File_By_Mapping(old_path, new_path);
         else
           copy_File(old_path, new_path);
+      free(old_path);
+      free(new_path);
     }
     else if((file -> d_type) == DT_DIR && recursive)
     {
       if(!(strcmp(file -> d_name,".") == 0 || strcmp(file -> d_name,"..") == 0))
       {
-        are_Same(file -> d_name, input_folder_path, output_folder_path);
-        old_path = add_To_Path(input_folder_path, file -> d_name);
         new_path = add_To_Path(output_folder_path, file -> d_name);
         if(!(tmp = opendir(new_path)))
         {
@@ -273,7 +283,10 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
         }
         else
           closedir(tmp);
+        free(new_path);
+        old_path = add_To_Path(input_folder_path, file -> d_name);
         browse_Folder(old_path, new_path, recursive, size_of_file);
+        free(old_path);
       }
     }
   }
