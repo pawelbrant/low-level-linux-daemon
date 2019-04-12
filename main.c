@@ -1,5 +1,14 @@
 #include "local_functions.h"
 
+volatile bool wake;
+
+//signal handler
+void handler(int signal)
+{
+  if(signal == SIGINT)
+    wake = true;
+}
+
 int main(int argc, char *argv[])
 {
   // opening log
@@ -99,17 +108,19 @@ int main(int argc, char *argv[])
     source, destination, sleep_time, recursive, max_size
   );
 
+  signal(SIGQUIT, handler);
+
   while (1)
   {
     check_Existing(source, destination, recursive);
     browse_Folder(source, destination, recursive, max_size);
     syslog(LOG_NOTICE, "Entering sleep mode");
-    if(sleep(sleep_time) == 0 || wake == 1)
+    if(sleep(sleep_time) == false || wake == true)
     {
-      if(wake == 1)
+      if(wake == true)
       {
         syslog(LOG_NOTICE, "Woken up by user");
-        wake = 0;
+        wake = false;
       }
       else
       {

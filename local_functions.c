@@ -122,6 +122,12 @@ bool are_Same(char *file_name, char *input_folder_path, char *output_folder_path
   char *old_path = add_To_Path(input_folder_path, file_name);
   char *new_path = add_To_Path(output_folder_path, file_name);
   catalog_path = opendir(output_folder_path);
+  if(catalog_path == NULL)
+  {
+    syslog(LOG_ERR, "Could not open folder %s", output_folder_path);
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   while(file = readdir(catalog_path))
   {
     if(strcmp(file->d_name, file_name) == 0)
@@ -150,6 +156,12 @@ void check_Existing(char *input_folder_path, char *output_folder_path, bool recu
   DIR *catalog_path;
   struct dirent *file, *content;
   catalog_path = opendir(output_folder_path);
+  if(catalog_path == NULL)
+  {
+    syslog(LOG_ERR, "Could not open folder %s", output_folder_path);
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   while(file = readdir(catalog_path))
   {
     char *file_name = file -> d_name;
@@ -204,6 +216,12 @@ void delete_Folder(char *path)
   DIR *catalog_path;
   struct dirent *file;
   catalog_path = opendir(path);
+  if(catalog_path == NULL)
+  {
+    syslog(LOG_ERR, "Could not open folder %s", path);
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   while(file = readdir(catalog_path))
   {
     file_name = file -> d_name;
@@ -270,7 +288,8 @@ void copy_File_By_Mapping(char *input, char *output)
   int output_file = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
   if(input_file == -1 || output_file == -1)
   {
-    syslog(LOG_ERR, "Can't open a file.");
+    syslog(LOG_ERR, "Can't open a file");
+    syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
   char *map = (char*) mmap (0, size, PROT_READ, MAP_SHARED | MAP_FILE, input_file, 0);
