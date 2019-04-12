@@ -1,19 +1,11 @@
 #include "local_functions.h"
 
-//concatenates char arrays
-char *add_Strings(char *a, char *b)
-{
-  int len = strlen(a) + strlen(b);
-  char *nowy = (char *)malloc(len*sizeof(char));
-  strcpy(nowy, a);
-  strcat(nowy, b);
-  return nowy;
-}
 
 //checks whether main app has been called with valid parameters
+//takes number of program arguments, list of those arguments
 bool is_Call_Valid(int number, char *params[])
 {
-  if(number<3)
+  if(number < 3)
   {
     printf("Not enought input arguments\n");
     syslog(LOG_ERR, "Not enought input arguments");
@@ -32,6 +24,7 @@ bool is_Call_Valid(int number, char *params[])
 }
 
 //checks whether given path points a directory
+//takes path
 bool is_Directory(char *path)
 {
   struct stat s;
@@ -45,7 +38,8 @@ bool is_Directory(char *path)
   return false;
 }
 
-//may be modified with following function to make one returning stat type
+//returns size of file
+//takes path
 off_t get_Size(char *input)
 {
   struct stat size;
@@ -57,6 +51,8 @@ off_t get_Size(char *input)
   return size.st_size;
 }
 
+//returns modification date of a file
+//takes path
 time_t get_Time(char *input)
 {
   struct stat time;
@@ -68,6 +64,9 @@ time_t get_Time(char *input)
   return time.st_mtime;
 }
 
+//returns permissions of a file
+//takes paths
+//currently unused
 mode_t get_Permissions(char *input)
 {
   struct stat permissions;
@@ -79,6 +78,8 @@ mode_t get_Permissions(char *input)
   return permissions.st_mode;
 }
 
+//changes modification date of a file to match another file
+//takes two paths
 void change_Parameters(char *input, char *output)
 {
   struct utimbuf time;
@@ -91,92 +92,99 @@ void change_Parameters(char *input, char *output)
   }
 }
 
-char *replace_Catalog(char *aux, char *input_folder_path, char *output_folder_path)
-{
-  char *path = aux + strlen(input_folder_path);
-  char *new_path = malloc(strlen(output_folder_path)+strlen(path)+1);
-  strcpy(new_path,output_folder_path);
-  strcat(new_path,path);
-  printf("\n\n\n");
-  printf("replace_Catalog path %s\n",path);
-  printf("replace_Catalog new_path %s\n",new_path);
-  printf("\n\n\n");
-  return new_path;
-}
-
+//creates a valid path to a file from path to a directory and filename
+//takes path to directory and filename
 char *add_To_Path(char *path, char *file_name)
 {
-  char *new_path = malloc(strlen(path)+2+strlen(file_name));
+  int len = strlen(path) + strlen(file_name) + 1;
+  char *new_path = (char *)malloc(len * sizeof(char));
   strcpy(new_path, path);
   strcat(new_path,"/");
   strcat(new_path,file_name);
-  new_path[strlen(path)+1+strlen(file_name)]='\0';
-  printf("\n\n\n");
-  printf("add_to_path file_name %s\n", new_path);
-  printf("\n\n\n");
   return new_path;
 }
 
-bool file_Comparing(char *path, char *input_folder_path, char *output_folder_path)
+//checks if there is a maching file or directory in given folder
+//takes filename and path to a directory
+bool file_Comparing(char *file_name, char *input_folder_path, char *output_folder_path)
 {
-  bool result = 0;
-  char *path_name = path+strlen(input_folder_path);
-  char *search = malloc(strlen(path_name));
-  char *new_path = replace_Catalog(path, input_folder_path, output_folder_path);
-  int i = strlen(new_path);
-  for(i; new_path[i] != '/'; i--);
-  strcpy(search,new_path+i+1);
-  new_path[i]='\0';
+  char *old_path = add_To_Path(input_folder_path, file_name);
+  char *new_path = add_To_Path(output_folder_path, file_name);
+  bool check = 1;
   struct dirent *file;
   DIR *catalog_path;
-  catalog_path = opendir(new_path);
+  catalog_path = opendir(output_folder_path);
   while(file = readdir(catalog_path))
   {
-    if(strcmp(file->d_name, search)==0)
+    if(strcmp(file->d_name, file_name) == 0)
     {
-      free(search);
-      if((file->d_type)==DT_DIR) return 0;
-      else return 1;
+      if((file -> d_type) == DT_REG)
+      {
+        if(!(get_Time(old_path) - get_Time(new_path)))
+          check = 0;
+      }
+      else
+      {
+        check = 0;
+      }
     }
-    else result=1;
   }
+  free(old_path);
+  free(new_path);
   closedir(catalog_path);
-  return result;
+  return check;
 }
 
-void delete_File(char *aux, char *input_folder_path, char *output_folder_path, bool recursive)
+void delete_File(char *input_folder_path, char *output_folder_path, bool recursive)
 {
-  struct dirent *file;
-  DIR *catalog_path, *tmp;
-  catalog_path = opendir(aux);
+  struct dirent *file, *content;
+  DIR *catalog_path, *temp;
+  char *old_path;
+  char *new_path;
+  catalog_path = opendir(output_folder_path);
+  // printf("%s\n", "1");
   while(file = readdir(catalog_path))
   {
-    if((file->d_type)==DT_DIR)
+    if((file -> d_type) == DT_DIR && recursive)
     {
-      if(recursive)
+      if(!(strcmp(file -> d_name,".") == 0 || strcmp(file -> d_name, "..") == 0))
       {
-        if(!(strcmp(file->d_name,".") == 0 || strcmp(file->d_name, "..")==0))
+        if(file_Comparing(file -> d_name, output_folder_path, input_folder_path))
         {
-          char *new_path = add_To_Path(aux,file->d_name);
-          delete_File(new_path,output_folder_path,input_folder_path,recursive);
-          if(!(tmp=opendir(replace_Catalog(new_path,input_folder_path,output_folder_path))))
+          char *old_path = add_To_Path(input_folder_path, file -> d_name);
+          char *new_path = add_To_Path(output_folder_path, file -> d_name);
+          temp = opendir(new_path);
+          while(content = readdir(temp))
           {
-            syslog(LOG_INFO, "Catalog %s deleted.", new_path);
-            remove(new_path);
+            if(access(new_path, F_OK) == 0)
+            {
+              remove(add_To_Path(new_path, content -> d_name));
+            }
           }
-          else closedir(tmp);
+          closedir(temp);
+          remove(new_path);
+          syslog(LOG_INFO, "Catalog %s deleted.", new_path);
+        }
+        else
+        {
+          char *old_path = add_To_Path(input_folder_path, file -> d_name);
+          char *new_path = add_To_Path(output_folder_path, file -> d_name);
+          delete_File(old_path, new_path, recursive);
         }
       }
-
     }
-    else
+    else if((file -> d_type) == DT_REG)
     {
-      char *new_path = add_To_Path(aux,file->d_name);
-      if(access(replace_Catalog(new_path,output_folder_path,input_folder_path),F_OK) == -1)
+      // printf("%s\n", "2");
+      char *old_path = add_To_Path(input_folder_path, file -> d_name);
+      char *new_path = add_To_Path(output_folder_path, file -> d_name);
+      if(access(new_path, F_OK) == 0 && file_Comparing(file -> d_name, output_folder_path, input_folder_path))
       {
-        syslog(LOG_INFO, "File %s deleted.", new_path);
         remove(new_path);
+        syslog(LOG_INFO, "File %s deleted.", new_path);
       }
+      free(old_path);
+      free(new_path);
     }
   }
   closedir(catalog_path);
@@ -205,7 +213,7 @@ void copy_File(char *input, char *output)
     close(input_file);
     close(output_file);
     change_Parameters(input,output);
-    syslog(LOG_INFO, "Success.");
+    syslog(LOG_INFO, "Coppied in normal mode: File %s to %s.", input, output);
   }
 }
 
@@ -233,49 +241,45 @@ void Login(int sig)
   syslog(LOG_INFO, "Waking up.");
 }
 
-void browse_Folder(char *aux, char *input_folder_path, char *output_folder_path, bool recursive, int size_of_file)
+void browse_Folder(char *input_folder_path, char *output_folder_path, bool recursive, int size_of_file)
 {
-  printf("We are in %s\n", aux);
   struct dirent *file;
   DIR *path, *tmp;
-  path = opendir(aux);
+  char *file_name;
+  char *old_path;
   char *new_path;
+  path = opendir(input_folder_path);
   while(file = readdir(path))
   {
-    printf("%s  \n", file->d_name);
-    if((file->d_type)==DT_DIR)
+    if((file -> d_type) == DT_REG)
     {
-      if(recursive)
-      {
-        if(!(strcmp(file->d_name,".")==0 || strcmp(file->d_name,"..")==0))
-        {
-          char *folder_path = replace_Catalog(add_To_Path(aux, file->d_name),input_folder_path, output_folder_path);
-          if(!(tmp = opendir(folder_path)))
-          {
-            syslog(LOG_INFO, "Created folder %s", folder_path);
-            mkdir(folder_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-          }
-          else closedir(tmp);
-          new_path = add_To_Path(aux, file->d_name);
-          browse_Folder(new_path, input_folder_path,output_folder_path, recursive, size_of_file);
-        }
-      }
+      old_path = add_To_Path(input_folder_path, file -> d_name);
+      new_path = add_To_Path(output_folder_path, file -> d_name);
+      if(file_Comparing(file -> d_name, input_folder_path, output_folder_path))
+
+        if(get_Size(old_path)>size_of_file)
+          copy_File_By_Mapping(old_path, new_path);
+        else
+          copy_File(old_path, new_path);
+      free(old_path);
+      free(new_path);
     }
-    else if((file->d_type)==DT_REG)
+    else if((file -> d_type) == DT_DIR && recursive)
     {
-      new_path = add_To_Path(aux, file->d_name);
-      int i = file_Comparing(new_path, input_folder_path, output_folder_path);
-      if(i==1)
+      if(!(strcmp(file -> d_name,".") == 0 || strcmp(file -> d_name,"..") == 0))
       {
-        if(get_Size(new_path)>size_of_file)
+        new_path = add_To_Path(output_folder_path, file -> d_name);
+        if(!(tmp = opendir(new_path)))
         {
-          char* source_file_path = replace_Catalog(new_path, input_folder_path, output_folder_path);
-          copy_File_By_Mapping(new_path, source_file_path);
+          mkdir(new_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+          syslog(LOG_INFO, "Created folder %s", new_path);
         }
         else
-        {
-          copy_File(new_path, replace_Catalog(new_path, input_folder_path, output_folder_path));
-        }
+          closedir(tmp);
+        free(new_path);
+        old_path = add_To_Path(input_folder_path, file -> d_name);
+        browse_Folder(old_path, new_path, recursive, size_of_file);
+        free(old_path);
       }
     }
   }
