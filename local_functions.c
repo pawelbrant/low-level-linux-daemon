@@ -2,6 +2,7 @@
 
 
 //checks whether main app has been called with valid parameters
+//takes number of program arguments, list of those arguments
 bool is_Call_Valid(int number, char *params[])
 {
   if(number < 3)
@@ -23,6 +24,7 @@ bool is_Call_Valid(int number, char *params[])
 }
 
 //checks whether given path points a directory
+//takes path
 bool is_Directory(char *path)
 {
   struct stat s;
@@ -36,7 +38,8 @@ bool is_Directory(char *path)
   return false;
 }
 
-//may be modified with following function to make one returning stat type
+//returns size of file
+//takes path
 off_t get_Size(char *input)
 {
   struct stat size;
@@ -48,6 +51,8 @@ off_t get_Size(char *input)
   return size.st_size;
 }
 
+//returns modification date of a file
+//takes path
 time_t get_Time(char *input)
 {
   struct stat time;
@@ -59,6 +64,9 @@ time_t get_Time(char *input)
   return time.st_mtime;
 }
 
+//returns permissions of a file
+//takes paths
+//currently unused
 mode_t get_Permissions(char *input)
 {
   struct stat permissions;
@@ -70,6 +78,8 @@ mode_t get_Permissions(char *input)
   return permissions.st_mode;
 }
 
+//changes modification date of a file to match another file
+//takes two paths
 void change_Parameters(char *input, char *output)
 {
   struct utimbuf time;
@@ -82,6 +92,8 @@ void change_Parameters(char *input, char *output)
   }
 }
 
+//creates a valid path to a file from path to a directory and filename
+//takes path to directory and filename
 char *add_To_Path(char *path, char *file_name)
 {
   int len = strlen(path) + strlen(file_name) + 1;
@@ -92,6 +104,8 @@ char *add_To_Path(char *path, char *file_name)
   return new_path;
 }
 
+//checks if there is a maching file or directory in given folder
+//takes filename and path to a directory
 bool file_Comparing(char *file_name, char *input_folder_path, char *output_folder_path)
 {
   char *old_path = add_To_Path(input_folder_path, file_name);
@@ -115,7 +129,8 @@ bool file_Comparing(char *file_name, char *input_folder_path, char *output_folde
       }
     }
   }
-  // printf("In func file_Comparing: %s %s %s return value %d\n", file_name, input_folder_path, output_folder_path, check);
+  free(old_path);
+  free(new_path);
   closedir(catalog_path);
   return check;
 }
@@ -127,6 +142,7 @@ void delete_File(char *input_folder_path, char *output_folder_path, bool recursi
   char *old_path;
   char *new_path;
   catalog_path = opendir(output_folder_path);
+  // printf("%s\n", "1");
   while(file = readdir(catalog_path))
   {
     if((file -> d_type) == DT_DIR && recursive)
@@ -157,8 +173,9 @@ void delete_File(char *input_folder_path, char *output_folder_path, bool recursi
         }
       }
     }
-    else if((file -> d_type) = DT_REG)
+    else if((file -> d_type) == DT_REG)
     {
+      // printf("%s\n", "2");
       char *old_path = add_To_Path(input_folder_path, file -> d_name);
       char *new_path = add_To_Path(output_folder_path, file -> d_name);
       if(access(new_path, F_OK) == 0 && file_Comparing(file -> d_name, output_folder_path, input_folder_path))
@@ -166,6 +183,8 @@ void delete_File(char *input_folder_path, char *output_folder_path, bool recursi
         remove(new_path);
         syslog(LOG_INFO, "File %s deleted.", new_path);
       }
+      free(old_path);
+      free(new_path);
     }
   }
   closedir(catalog_path);
@@ -242,13 +261,13 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
           copy_File_By_Mapping(old_path, new_path);
         else
           copy_File(old_path, new_path);
+      free(old_path);
+      free(new_path);
     }
     else if((file -> d_type) == DT_DIR && recursive)
     {
       if(!(strcmp(file -> d_name,".") == 0 || strcmp(file -> d_name,"..") == 0))
       {
-        file_Comparing(file -> d_name, input_folder_path, output_folder_path);
-        old_path = add_To_Path(input_folder_path, file -> d_name);
         new_path = add_To_Path(output_folder_path, file -> d_name);
         if(!(tmp = opendir(new_path)))
         {
@@ -257,7 +276,10 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
         }
         else
           closedir(tmp);
+        free(new_path);
+        old_path = add_To_Path(input_folder_path, file -> d_name);
         browse_Folder(old_path, new_path, recursive, size_of_file);
+        free(old_path);
       }
     }
   }
