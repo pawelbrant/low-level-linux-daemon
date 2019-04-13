@@ -1,12 +1,14 @@
 #include "local_functions.h"
 
 volatile bool wake;
+volatile bool stop;
 
 //signal handler
-void handler(int signal)
+void handler(int sig)
 {
-  if(signal == SIGINT)
-    wake = true;
+  wake = true;
+  if(sig == SIGINT || sig == SIGTERM)
+    stop = true;
 }
 
 int main(int argc, char *argv[])
@@ -108,7 +110,10 @@ int main(int argc, char *argv[])
     source, destination, sleep_time, recursive, max_size
   );
 
-  signal(SIGQUIT, handler);
+  //handling SIGUSR1 signal
+  signal(SIGUSR1, handler);
+  signal(SIGINT, handler);
+  signal(SIGTERM, handler);
 
   while (1)
   {
@@ -119,6 +124,8 @@ int main(int argc, char *argv[])
     {
       if(wake == true)
       {
+        if(stop == true)
+          break;
         syslog(LOG_NOTICE, "Woken up by user");
         wake = false;
       }
@@ -128,7 +135,7 @@ int main(int argc, char *argv[])
       }
     }
   }
-  closelog();
   syslog(LOG_NOTICE, "Daemon shutting down");
+  closelog();
   return 0;
 }
