@@ -134,7 +134,10 @@ bool are_Same(char *file_name, char *input_folder_path, char *output_folder_path
       if((file -> d_type) == DT_REG)
       {
         if(!(get_Time(old_path) - get_Time(new_path)))
-          check = true;
+        {
+          if(get_Permissions(old_path) == get_Permissions(new_path))
+            check = true;
+        }
       }
       else
       {
