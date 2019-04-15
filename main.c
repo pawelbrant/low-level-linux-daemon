@@ -87,14 +87,6 @@ int main(int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
 
-  // changing the current working directory
-  if ((chdir("/")) < 0)
-  {
-    syslog(LOG_ERR, "Could not change working directory");
-    syslog(LOG_NOTICE, "Daemon shutting down");
-    exit(EXIT_FAILURE);
-  }
-
   // closing the standard file descriptors
   close(STDIN_FILENO);
   //close(STDOUT_FILENO);
