@@ -66,7 +66,6 @@ time_t get_Time(char *path)
 
 //returns permissions of a file
 //takes paths
-//currently unused
 mode_t get_Permissions(char *path)
 {
   struct stat permissions;
@@ -192,7 +191,12 @@ void check_Existing(char *input_folder_path, char *output_folder_path, bool recu
       {
         if(!(are_Same(file_name, output_folder_path, input_folder_path)))
         {
-          remove(new_path);
+          if(remove(new_path) == -1)
+          {
+            syslog(LOG_ERR, "Error while removing %s", new_path);
+            syslog(LOG_NOTICE, "Daemon shutting down");
+            exit(EXIT_FAILURE);
+          }
           syslog(LOG_INFO, "File %s deleted.", new_path);
         }
       }
@@ -237,7 +241,12 @@ void delete_Folder(char *path)
       }
       else if(file -> d_type == DT_REG)
       {
-        remove(removed_name);
+        if(remove(removed_name) == -1)
+        {
+          syslog(LOG_ERR, "Error while removing %s", removed_name);
+          syslog(LOG_NOTICE, "Daemon shutting down");
+          exit(EXIT_FAILURE);
+        }
         syslog(LOG_INFO, "File %s deleted.", removed_name);
       }
     }
@@ -250,7 +259,12 @@ void delete_Folder(char *path)
     free(removed_name);
   }
   closedir(catalog_path);
-  remove(path);
+  if(remove(path) == -1)
+  {
+    syslog(LOG_ERR, "Error while removing %s", path);
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   syslog(LOG_INFO, "Catalog %s deleted.", path);
 }
 
@@ -274,11 +288,17 @@ void copy_File(char *input, char *output)
       perror("Error.");
       exit(EXIT_FAILURE);
     }
-    close(input_file);
-    close(output_file);
-    change_Parameters(input,output);
-    syslog(LOG_INFO, "Coppied in normal mode: File %s to %s.", input, output);
   }
+  close(input_file);
+  close(output_file);
+  change_Parameters(input, output);
+  if(chmod(output, get_Permissions(input)) == -1)
+  {
+    syslog(LOG_ERR, "Can't change permissions for %s", output);
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
+  syslog(LOG_INFO, "Coppied in normal mode: File %s to %s.", input, output);
 }
 
 void copy_File_By_Mapping(char *input, char *output)
@@ -298,6 +318,12 @@ void copy_File_By_Mapping(char *input, char *output)
   close(output_file);
   munmap(map, size);
   change_Parameters(input, output);
+  if(chmod(output, get_Permissions(input)) == -1)
+  {
+    syslog(LOG_ERR, "Can't change permissions for %s", output);
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   syslog(LOG_INFO, "Coppied using mapping: File %s to %s.", input, output);
 }
 

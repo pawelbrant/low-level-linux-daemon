@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 
   //setting default option values
   int sleep_time = 300;
-  long  max_size = 1024;
+  long long max_size = 1024;
   bool recursive = false;
 
   // modifying option values from given parameters
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     "Destination directory: %s  "\
     "Sleep time: %d seconds  "\
     "Recursive: %d  "\
-    "Max file size for standard copying: %ld",
+    "Max file size for standard copying: %llu",
     source, destination, sleep_time, recursive, max_size
   );
 
