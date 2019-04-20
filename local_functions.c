@@ -273,7 +273,10 @@ void delete_Folder(char *path)
 
 void copy_File(char *input, char *output)
 {
-  char buffer[16];
+  clock_t start, end;
+  double cpu_time_used;
+  start = clock();
+  char buffer[/*131072*/1024];
   int input_file, output_file, read_input, read_output;
   input_file = open(input, O_RDONLY);
   output_file = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
@@ -302,10 +305,16 @@ void copy_File(char *input, char *output)
     exit(EXIT_FAILURE);
   }
   syslog(LOG_INFO, "Coppied in normal mode: File %s to %s.", input, output);
+  end = clock();
+  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  syslog(LOG_INFO, "KOPIOWANIE STANDARDOWE: %f", cpu_time_used);
 }
 
 void copy_File_By_Mapping(char *input, char *output)
 {
+  clock_t start, end;
+  double cpu_time_used;
+  start = clock();
   int size = get_Size(input);
   int input_file = open(input, O_RDONLY);
   int output_file = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
@@ -328,6 +337,9 @@ void copy_File_By_Mapping(char *input, char *output)
     exit(EXIT_FAILURE);
   }
   syslog(LOG_INFO, "Coppied using mapping: File %s to %s.", input, output);
+  end = clock();
+  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  syslog(LOG_INFO, "KOPIOWANIE PRZEZ MAPOWANIE: %f", cpu_time_used);
 }
 
 void browse_Folder(char *input_folder_path, char *output_folder_path, bool recursive, int size_of_file)

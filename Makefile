@@ -1,10 +1,10 @@
-CC = gcc
+OBJ = main.o local_functions.o
 
-all: main.c local_functions.o local_functions.h
-	$(CC) main.c local_functions.o -o daemon
+all: daemon
+daemon: $(OBJ)
+	gcc $(OBJ) -o daemon
+$(OBJ): local_functions.h
 
-local_functions.o: local_functions.c local_functions.h
-	$(CC) local_functions.c -c -o local_functions.o
-
-clear:
-	rm -f *.o
+.PHONY: clean
+clean:
+	rm -f *.o daemon
