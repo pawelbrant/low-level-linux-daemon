@@ -129,12 +129,6 @@ bool are_Same(char *file_name, char *input_folder_path, char *output_folder_path
   }
   while(file = readdir(catalog_path))
   {
-    if(errno != 0)
-    {
-      syslog(LOG_ERR, "errno: %s", strerror(errno));
-      syslog(LOG_NOTICE, "Daemon shutting down");
-      exit(EXIT_FAILURE);
-    }
     if(strcmp(file->d_name, file_name) == 0)
     {
       if((file -> d_type) == DT_REG)
@@ -150,6 +144,13 @@ bool are_Same(char *file_name, char *input_folder_path, char *output_folder_path
         check = true;
       }
     }
+    errno = 0;
+  }
+  if(errno != 0)
+  {
+    syslog(LOG_ERR, "errno: %s", strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
   }
   free(old_path);
   free(new_path);
@@ -177,12 +178,6 @@ void check_Existing(char *input_folder_path, char *output_folder_path, bool recu
   }
   while(file = readdir(catalog_path))
   {
-    if(errno != 0)
-    {
-      syslog(LOG_ERR, "errno: %s", strerror(errno));
-      syslog(LOG_NOTICE, "Daemon shutting down");
-      exit(EXIT_FAILURE);
-    }
     char *file_name = file -> d_name;
     if(file -> d_type == DT_DIR && recursive)
     {
@@ -229,6 +224,13 @@ void check_Existing(char *input_folder_path, char *output_folder_path, bool recu
       free(old_path);
       free(new_path);
     }
+    errno = 0;
+  }
+  if(errno != 0 )
+  {
+    syslog(LOG_ERR, "errno: %s", strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
   }
   if(closedir(catalog_path) == -1)
   {
@@ -253,12 +255,6 @@ void delete_Folder(char *path)
   }
   while(file = readdir(catalog_path))
   {
-    if(errno != 0)
-    {
-      syslog(LOG_ERR, "errno: %s", strerror(errno));
-      syslog(LOG_NOTICE, "Daemon shutting down");
-      exit(EXIT_FAILURE);
-    }
     file_name = file -> d_name;
     removed_name = add_To_Path(path, file_name);
     if(access(removed_name, F_OK) == 0)
@@ -288,6 +284,13 @@ void delete_Folder(char *path)
       exit(EXIT_FAILURE);
     }
     free(removed_name);
+    errno = 0;
+  }
+  if(errno != 0 )
+  {
+    syslog(LOG_ERR, "errno: %s", strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
   }
   if(closedir(catalog_path) == -1)
   {
@@ -306,9 +309,9 @@ void delete_Folder(char *path)
 
 void copy_File(char *input, char *output)
 {
-  clock_t start, end;
-  double cpu_time_used;
-  start = clock();
+  // clock_t start, end;
+  // double cpu_time_used;
+  // start = clock();
   char buffer[/*131072*/1024];
   int input_file, output_file, read_input, read_output;
   input_file = open(input, O_RDONLY);
@@ -361,16 +364,16 @@ void copy_File(char *input, char *output)
     exit(EXIT_FAILURE);
   }
   syslog(LOG_INFO, "Coppied in normal mode: File %s to %s.", input, output);
-  end = clock();
-  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-  syslog(LOG_INFO, "KOPIOWANIE STANDARDOWE: %f", cpu_time_used);
+  // end = clock();
+  // cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  // syslog(LOG_INFO, "KOPIOWANIE STANDARDOWE: %f", cpu_time_used);
 }
 
 void copy_File_By_Mapping(char *input, char *output)
 {
-  clock_t start, end;
-  double cpu_time_used;
-  start = clock();
+  // clock_t start, end;
+  // double cpu_time_used;
+  // start = clock();
   int size = get_Size(input);
   int input_file = open(input, O_RDONLY);
   if(input_file == -1)
@@ -425,9 +428,9 @@ void copy_File_By_Mapping(char *input, char *output)
     exit(EXIT_FAILURE);
   }
   syslog(LOG_INFO, "Coppied using mapping: File %s to %s.", input, output);
-  end = clock();
-  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-  syslog(LOG_INFO, "KOPIOWANIE PRZEZ MAPOWANIE: %f", cpu_time_used);
+  // end = clock();
+  // cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  // syslog(LOG_INFO, "KOPIOWANIE PRZEZ MAPOWANIE: %f", cpu_time_used);
 }
 
 void browse_Folder(char *input_folder_path, char *output_folder_path, bool recursive, int size_of_file)
@@ -446,12 +449,6 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
   }
   while(file = readdir(path))
   {
-    if(errno != 0)
-    {
-      syslog(LOG_ERR, "errno: %s", strerror(errno));
-      syslog(LOG_NOTICE, "Daemon shutting down");
-      exit(EXIT_FAILURE);
-    }
     file_name = file -> d_name;
     if((file -> d_type) == DT_REG)
     {
@@ -489,6 +486,13 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
         free(old_path);
       }
     }
+    errno = 0;
+  }
+  if(errno != 0 )
+  {
+    syslog(LOG_ERR, "errno: %s", strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
   }
   if(closedir(path) == -1)
   {
