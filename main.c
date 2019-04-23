@@ -7,7 +7,7 @@ volatile bool stop;
 void handler(int sig)
 {
   wake = true;
-  if(sig == SIGINT || sig == SIGTERM)
+  if(sig == SIGTERM)
     stop = true;
 }
 
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
   }
   if (sleep_time == 0 || max_size == 0)
   {
-    syslog(LOG_ERR, "Invalid option values");
+    syslog(LOG_ERR, "Invalid option parameters values");
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -62,9 +62,9 @@ int main(int argc, char *argv[])
 
   //forking off the parent process
   pid = fork();
-  if (pid < 0)
+  if (pid == -1)
   {
-    syslog(LOG_ERR, "Unable to fork");
+    syslog(LOG_ERR, "%s", strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -80,16 +80,16 @@ int main(int argc, char *argv[])
 
   // creating a new SID for the child process
   sid = setsid();
-  if (sid < 0)
+  if (sid == -1)
   {
-    syslog(LOG_ERR, "Unable to get session ID");
+    syslog(LOG_ERR, "%s", strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
 
   // closing the standard file descriptors
   close(STDIN_FILENO);
-  //close(STDOUT_FILENO);
+  close(STDOUT_FILENO);
   close(STDERR_FILENO);
 
   syslog(LOG_NOTICE,
@@ -104,7 +104,6 @@ int main(int argc, char *argv[])
 
   //handling SIGUSR1 signal
   signal(SIGUSR1, handler);
-  signal(SIGINT, handler);
   signal(SIGTERM, handler);
 
   while (1)

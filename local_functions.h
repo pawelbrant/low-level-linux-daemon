@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <syslog.h>
 #include <time.h>
+#include <errno.h>
 
 bool is_Call_Valid(int number_of_parameters, char *parameters[]);
 bool is_Directory(char *path);

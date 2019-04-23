@@ -27,7 +27,7 @@ bool is_Directory(char *path)
   struct stat s;
   if(stat(path, &s) == -1)
   {
-    syslog(LOG_ERR, "Can't determine if %s is directory", path);
+    syslog(LOG_ERR, "Can't determine if %s is a directory; errno: %s", path, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -43,7 +43,7 @@ off_t get_Size(char *path)
   struct stat size;
   if(stat(path, &size) == -1)
   {
-    syslog(LOG_ERR, "Can't get size of file %s", path);
+    syslog(LOG_ERR, "Can't get size of file %s; errno: %s", path, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -57,7 +57,7 @@ time_t get_Time(char *path)
   struct stat time;
   if(stat(path, &time) == -1)
   {
-    syslog(LOG_ERR, "Can't get modification data for %s", path);
+    syslog(LOG_ERR, "Can't get modification date for %s; errno: %s", path, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -71,7 +71,7 @@ mode_t get_Permissions(char *path)
   struct stat permissions;
   if(stat(path, &permissions) == -1)
   {
-    syslog(LOG_ERR, "Can't get permissions for %s", path);
+    syslog(LOG_ERR, "Can't get permissions for %s; errno: %s", path, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -85,9 +85,9 @@ void change_Parameters(char *input, char *output)
   struct utimbuf time;
   time.actime = 0;
   time.modtime = get_Time(input);
-  if(utime(output, &time) != 0)
+  if(utime(output, &time) == -1)
   {
-    syslog(LOG_ERR, "Error with modification data.");
+    syslog(LOG_ERR, "Can't modify modification date for file %s; errno: %s", output, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -101,7 +101,7 @@ char *add_To_Path(char *path, char *file_name)
   char *new_path = (char *)malloc(len * sizeof(char));
   if(new_path == NULL)
   {
-    syslog(LOG_ERR, "Malloc function misfunction");
+    syslog(LOG_ERR, "Malloc function misfunction; errno: %s", strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -123,12 +123,18 @@ bool are_Same(char *file_name, char *input_folder_path, char *output_folder_path
   catalog_path = opendir(output_folder_path);
   if(catalog_path == NULL)
   {
-    syslog(LOG_ERR, "Could not open folder %s", output_folder_path);
+    syslog(LOG_ERR, "Could not open folder %s; errno: %s", output_folder_path, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
   while(file = readdir(catalog_path))
   {
+    if(errno != 0)
+    {
+      syslog(LOG_ERR, "errno: %s", strerror(errno));
+      syslog(LOG_NOTICE, "Daemon shutting down");
+      exit(EXIT_FAILURE);
+    }
     if(strcmp(file->d_name, file_name) == 0)
     {
       if((file -> d_type) == DT_REG)
@@ -147,7 +153,12 @@ bool are_Same(char *file_name, char *input_folder_path, char *output_folder_path
   }
   free(old_path);
   free(new_path);
-  closedir(catalog_path);
+  if(closedir(catalog_path) == -1)
+  {
+    syslog(LOG_ERR, "Could not close folder %s; errno: %s", output_folder_path, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   return check;
 }
 
@@ -160,12 +171,18 @@ void check_Existing(char *input_folder_path, char *output_folder_path, bool recu
   catalog_path = opendir(output_folder_path);
   if(catalog_path == NULL)
   {
-    syslog(LOG_ERR, "Could not open folder %s", output_folder_path);
+    syslog(LOG_ERR, "Could not open folder %s; errno: %s", output_folder_path, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
   while(file = readdir(catalog_path))
   {
+    if(errno != 0)
+    {
+      syslog(LOG_ERR, "errno: %s", strerror(errno));
+      syslog(LOG_NOTICE, "Daemon shutting down");
+      exit(EXIT_FAILURE);
+    }
     char *file_name = file -> d_name;
     if(file -> d_type == DT_DIR && recursive)
     {
@@ -196,7 +213,7 @@ void check_Existing(char *input_folder_path, char *output_folder_path, bool recu
         {
           if(remove(new_path) == -1)
           {
-            syslog(LOG_ERR, "Error while removing %s", new_path);
+            syslog(LOG_ERR, "Error while removing %s; errno: %s", new_path, strerror(errno));
             syslog(LOG_NOTICE, "Daemon shutting down");
             exit(EXIT_FAILURE);
           }
@@ -205,7 +222,7 @@ void check_Existing(char *input_folder_path, char *output_folder_path, bool recu
       }
       else
       {
-        syslog(LOG_ERR, "Unable to acces path %s", new_path);
+        syslog(LOG_ERR, "Unable to acces path %s; errno %s", new_path, strerror(errno));
         syslog(LOG_NOTICE, "Daemon shutting down");
         exit(EXIT_FAILURE);
       }
@@ -213,7 +230,12 @@ void check_Existing(char *input_folder_path, char *output_folder_path, bool recu
       free(new_path);
     }
   }
-  closedir(catalog_path);
+  if(closedir(catalog_path) == -1)
+  {
+    syslog(LOG_ERR, "Could not close folder %s; errno: %s", output_folder_path, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
 }
 
 void delete_Folder(char *path)
@@ -225,12 +247,18 @@ void delete_Folder(char *path)
   catalog_path = opendir(path);
   if(catalog_path == NULL)
   {
-    syslog(LOG_ERR, "Could not open folder %s", path);
+    syslog(LOG_ERR, "Could not open folder %s; errno: %s", path, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
   while(file = readdir(catalog_path))
   {
+    if(errno != 0)
+    {
+      syslog(LOG_ERR, "errno: %s", strerror(errno));
+      syslog(LOG_NOTICE, "Daemon shutting down");
+      exit(EXIT_FAILURE);
+    }
     file_name = file -> d_name;
     removed_name = add_To_Path(path, file_name);
     if(access(removed_name, F_OK) == 0)
@@ -246,7 +274,7 @@ void delete_Folder(char *path)
       {
         if(remove(removed_name) == -1)
         {
-          syslog(LOG_ERR, "Error while removing %s", removed_name);
+          syslog(LOG_ERR, "Error while removing %s; errno: %s", removed_name, strerror(errno));
           syslog(LOG_NOTICE, "Daemon shutting down");
           exit(EXIT_FAILURE);
         }
@@ -255,16 +283,21 @@ void delete_Folder(char *path)
     }
     else
     {
-      syslog(LOG_ERR, "Unable to acces path %s", removed_name);
+      syslog(LOG_ERR, "Unable to acces path %s; errno: %s", removed_name, strerror(errno));
       syslog(LOG_NOTICE, "Daemon shutting down");
       exit(EXIT_FAILURE);
     }
     free(removed_name);
   }
-  closedir(catalog_path);
+  if(closedir(catalog_path) == -1)
+  {
+    syslog(LOG_ERR, "Could not close folder %s; errno: %s", path, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   if(remove(path) == -1)
   {
-    syslog(LOG_ERR, "Error while removing %s", path);
+    syslog(LOG_ERR, "Error while removing %s; errno: %s", path, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -279,28 +312,51 @@ void copy_File(char *input, char *output)
   char buffer[/*131072*/1024];
   int input_file, output_file, read_input, read_output;
   input_file = open(input, O_RDONLY);
-  output_file = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-
-  if(input_file == -1 || output_file == -1)
+  if(input_file == -1)
   {
-    syslog(LOG_ERR, "Can't open a file.");
+    syslog(LOG_ERR, "Can't open file %s; errno: %s", input, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
+  output_file = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+  if(output_file == -1)
+  {
+    syslog(LOG_ERR, "Can't open/create file %s; errno: %s", output, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
   while((read_input = read(input_file, buffer, sizeof(buffer)))>0)
   {
-    read_output = write(output_file, buffer, (ssize_t) read_input);
-    if(read_output != read_input)
+    if(read_input == -1)
     {
-      perror("Error.");
+      syslog(LOG_ERR, "Can't read from file %s; errno: %s", input, strerror(errno));
+      syslog(LOG_NOTICE, "Daemon shutting down");
+      exit(EXIT_FAILURE);
+    }
+    read_output = write(output_file, buffer, (ssize_t) read_input);
+    if(read_output == -1)
+    {
+      syslog(LOG_ERR, "Can't write to file %s; errno: %s", output, strerror(errno));
+      syslog(LOG_NOTICE, "Daemon shutting down");
       exit(EXIT_FAILURE);
     }
   }
-  close(input_file);
-  close(output_file);
+  if(close(input_file) == -1)
+  {
+    syslog(LOG_ERR, "Can't close file %s; errno: %s", input, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
+  if(close(output_file) == -1)
+  {
+    syslog(LOG_ERR, "Can't close file %s; errno: %s", output, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   change_Parameters(input, output);
   if(chmod(output, get_Permissions(input)) == -1)
   {
-    syslog(LOG_ERR, "Can't change permissions for %s", output);
+    syslog(LOG_ERR, "Can't change permissions for %s; errno: %s", output, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -317,22 +373,54 @@ void copy_File_By_Mapping(char *input, char *output)
   start = clock();
   int size = get_Size(input);
   int input_file = open(input, O_RDONLY);
-  int output_file = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-  if(input_file == -1 || output_file == -1)
+  if(input_file == -1)
   {
-    syslog(LOG_ERR, "Can't open a file");
+    syslog(LOG_ERR, "Can't open file %s; errno: %s", input, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
+  int output_file = open(output, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+  if(output_file == -1)
+  {
+    syslog(LOG_ERR, "Can't open/create file %s; errno: %s", output, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
   char *map = (char*) mmap (0, size, PROT_READ, MAP_SHARED | MAP_FILE, input_file, 0);
-  write(output_file, map, size);
-  close(input_file);
-  close(output_file);
-  munmap(map, size);
+  if(map == MAP_FAILED)
+  {
+    syslog(LOG_INFO,"Failed to map data from file %s; errno: %s", input, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
+  if(write(output_file, map, size) == -1)
+  {
+    syslog(LOG_ERR, "Can't write to file %s; errno: %s", output, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
+  if(close(input_file) == -1)
+  {
+    syslog(LOG_ERR, "Can't close file %s; errno: %s", input, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
+  if(close(output_file) == -1)
+  {
+    syslog(LOG_ERR, "Can't close file %s; errno: %s", output, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
+  if(munmap(map, size) == -1)
+  {
+    syslog(LOG_INFO,"Failed to unmap data; errno: %s", strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   change_Parameters(input, output);
   if(chmod(output, get_Permissions(input)) == -1)
   {
-    syslog(LOG_ERR, "Can't change permissions for %s", output);
+    syslog(LOG_ERR, "Can't change permissions for %s; errno: %s", output, strerror(errno));
     syslog(LOG_NOTICE, "Daemon shutting down");
     exit(EXIT_FAILURE);
   }
@@ -350,8 +438,20 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
   DIR *path, *tmp;
   struct dirent *file;
   path = opendir(input_folder_path);
+  if(path == NULL)
+  {
+    syslog(LOG_ERR, "Could not open folder %s; errno: %s", input_folder_path, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
   while(file = readdir(path))
   {
+    if(errno != 0)
+    {
+      syslog(LOG_ERR, "errno: %s", strerror(errno));
+      syslog(LOG_NOTICE, "Daemon shutting down");
+      exit(EXIT_FAILURE);
+    }
     file_name = file -> d_name;
     if((file -> d_type) == DT_REG)
     {
@@ -374,7 +474,12 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
         old_path = add_To_Path(input_folder_path, file_name);
         if(!(tmp = opendir(new_path)))
         {
-          mkdir(new_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+          if(mkdir(new_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1)
+          {
+            syslog(LOG_ERR, "Could not create folder %s; errno: %s", new_path, strerror(errno));
+            syslog(LOG_NOTICE, "Daemon shutting down");
+            exit(EXIT_FAILURE);
+          }
           syslog(LOG_INFO, "Created folder %s", new_path);
         }
         else
@@ -385,5 +490,10 @@ void browse_Folder(char *input_folder_path, char *output_folder_path, bool recur
       }
     }
   }
-  closedir(path);
+  if(closedir(path) == -1)
+  {
+    syslog(LOG_ERR, "Could not close folder %s; errno: %s", input_folder_path, strerror(errno));
+    syslog(LOG_NOTICE, "Daemon shutting down");
+    exit(EXIT_FAILURE);
+  }
 }
